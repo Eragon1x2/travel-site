@@ -1,0 +1,149 @@
+* {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+*, :before, :after {
+  box-sizing: border-box;
+}
+
+:focus, :active, a:focus, a:active {
+  outline: none;
+}
+
+nav, footer, header, aside {
+  display: block;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  -ms-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  font-size: 14px;
+  line-height: 1;
+}
+
+input, button, textarea {
+  font-family: inherit;
+}
+
+input::-ms-clear {
+  display: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+button::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+
+a, a:visited, a:hover {
+  text-decoration: none;
+}
+
+ul li {
+  list-style: none;
+}
+
+img {
+  vertical-align: top;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-size: inherit;
+  font-weight: 400;
+}
+
+a {
+  color: #000;
+}
+
+body {
+  background-color: #e6e6e6;
+  font-family: Roboto, sans-serif;
+}
+
+.container {
+  max-width: 1156px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .container {
+    max-width: 768px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 425px) {
+  .container {
+    max-width: 425px;
+    margin: 0 auto;
+  }
+}
+
+.modal_window {
+  height: 100%;
+  width: 400px;
+  text-align: center;
+  background-color: #00000080;
+  align-items: center;
+  display: grid;
+  position: absolute;
+}
+
+.modal_window a {
+  color: #fff;
+  font-size: 20px;
+}
+
+.close_modal {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.close_modal img {
+  background-color: #000;
+}
+
+.non-visible {
+  display: none;
+}
+
+.navigation h3 {
+  justify-content: center;
+  align-items: center;
+  display: grid;
+}
+
+.navigation {
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 30px;
+  display: flex;
+}
+
+.navigation h3 a {
+  color: gray;
+  text-transform: none;
+  font-size: 20px;
+  text-decoration: underline wavy #084ca1;
+}
+
+.gg {
+  text-align: center;
+  align-items: center;
+}
+
+.gg h1 {
+  font-size: 30px;
+}
+
+/*# sourceMappingURL=error.0e844d27.css.map */
