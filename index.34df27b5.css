@@ -288,7 +288,7 @@ body {
   }
 
   .about_us__container {
-    height: 600px;
+    height: 700px;
   }
 }
 
@@ -499,9 +499,15 @@ body {
   }
 }
 
+@media (max-width: 425px) {
+  .offer_container {
+    height: 900px;
+  }
+}
+
 @media (max-width: 320.9px) {
   .offer_container {
-    height: 800px;
+    height: 900px;
     background: url("offer_back.b9e3977b.jpeg") 0 0 / 100% 100% no-repeat;
   }
 }

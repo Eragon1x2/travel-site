@@ -536,6 +536,7 @@ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 var _swiper = require("swiper");
 var _swiperDefault = parcelHelpers.interopDefault(_swiper);
 var _swiperBundleMinCss = require("swiper/swiper-bundle.min.css");
+var _swiperMinCss = require("swiper/swiper.min.css");
 const swiper = new (0, _swiperDefault.default)(".swiper", {
     modules: [
         (0, _swiper.Navigation)
@@ -543,12 +544,6 @@ const swiper = new (0, _swiperDefault.default)(".swiper", {
     navigation: {
         nextEl: ".swiper-button-next",
         prevEl: ".swiper-button-prev"
-    },
-    breakpoints: {
-        // when window width is >= 320px
-        320: {
-            spaceBetween: 1020
-        }
     }
 });
 const modal_button = document.querySelector(".burger_button");
@@ -567,7 +562,7 @@ form.addEventListener("submit", (e)=>{
     e.preventDefault();
 });
 
-},{"swiper":"cCbRx","swiper/swiper-bundle.min.css":"girFM","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cCbRx":[function(require,module,exports) {
+},{"swiper":"cCbRx","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","swiper/swiper-bundle.min.css":"girFM","swiper/swiper.min.css":"eFTGe"}],"cCbRx":[function(require,module,exports) {
 /**
  * Swiper 8.4.5
  * Most modern mobile touch slider and framework with hardware accelerated transitions
@@ -9165,6 +9160,6 @@ function EffectCards({ swiper , extendParams , on  }) {
 }
 exports.default = EffectCards;
 
-},{"../../shared/create-shadow.js":"9JYAP","../../shared/effect-init.js":"5DnvG","../../shared/effect-target.js":"eKqS8","../../shared/effect-virtual-transition-end.js":"VhYFx","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"girFM":[function() {},{}]},["jQVXF","1SICI"], "1SICI", "parcelRequire7680")
+},{"../../shared/create-shadow.js":"9JYAP","../../shared/effect-init.js":"5DnvG","../../shared/effect-target.js":"eKqS8","../../shared/effect-virtual-transition-end.js":"VhYFx","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"girFM":[function() {},{}],"eFTGe":[function() {},{}]},["jQVXF","1SICI"], "1SICI", "parcelRequire7680")
 
 //# sourceMappingURL=index.18dbc454.js.map
