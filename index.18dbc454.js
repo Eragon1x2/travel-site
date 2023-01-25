@@ -142,7 +142,7 @@
       this[globalName] = mainExports;
     }
   }
-})({"jQVXF":[function(require,module,exports) {
+})({"9tRox":[function(require,module,exports) {
 var global = arguments[3];
 var HMR_HOST = null;
 var HMR_PORT = null;
@@ -158,7 +158,7 @@ import type {
 interface ParcelRequire {
   (string): mixed;
   cache: {|[string]: ParcelModule|};
-  hotData: mixed;
+  hotData: {|[string]: mixed|};
   Module: any;
   parent: ?ParcelRequire;
   isParcelRequire: true;
@@ -200,7 +200,7 @@ var OldModule = module.bundle.Module;
 function Module(moduleName) {
     OldModule.call(this, moduleName);
     this.hot = {
-        data: module.bundle.hotData,
+        data: module.bundle.hotData[moduleName],
         _acceptCallbacks: [],
         _disposeCallbacks: [],
         accept: function(fn) {
@@ -210,10 +210,11 @@ function Module(moduleName) {
             this._disposeCallbacks.push(fn);
         }
     };
-    module.bundle.hotData = undefined;
+    module.bundle.hotData[moduleName] = undefined;
 }
 module.bundle.Module = Module;
-var checkedAssets, acceptedAssets, assetsToAccept /*: Array<[ParcelRequire, string]> */ ;
+module.bundle.hotData = {};
+var checkedAssets, assetsToDispose, assetsToAccept /*: Array<[ParcelRequire, string]> */ ;
 function getHostname() {
     return HMR_HOST || (location.protocol.indexOf("http") === 0 ? location.hostname : "localhost");
 }
@@ -236,8 +237,8 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== "undefined") {
     } // $FlowFixMe
     ws.onmessage = async function(event) {
         checkedAssets = {} /*: {|[string]: boolean|} */ ;
-        acceptedAssets = {} /*: {|[string]: boolean|} */ ;
         assetsToAccept = [];
+        assetsToDispose = [];
         var data = JSON.parse(event.data);
         if (data.type === "update") {
             // Remove error overlay if there is one
@@ -249,10 +250,22 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== "undefined") {
             if (handled) {
                 console.clear(); // Dispatch custom event so other runtimes (e.g React Refresh) are aware.
                 if (typeof window !== "undefined" && typeof CustomEvent !== "undefined") window.dispatchEvent(new CustomEvent("parcelhmraccept"));
-                await hmrApplyUpdates(assets);
-                for(var i = 0; i < assetsToAccept.length; i++){
-                    var id = assetsToAccept[i][1];
-                    if (!acceptedAssets[id]) hmrAcceptRun(assetsToAccept[i][0], id);
+                await hmrApplyUpdates(assets); // Dispose all old assets.
+                let processedAssets = {} /*: {|[string]: boolean|} */ ;
+                for(let i = 0; i < assetsToDispose.length; i++){
+                    let id = assetsToDispose[i][1];
+                    if (!processedAssets[id]) {
+                        hmrDispose(assetsToDispose[i][0], id);
+                        processedAssets[id] = true;
+                    }
+                } // Run accept callbacks. This will also re-execute other disposed assets in topological order.
+                processedAssets = {};
+                for(let i = 0; i < assetsToAccept.length; i++){
+                    let id = assetsToAccept[i][1];
+                    if (!processedAssets[id]) {
+                        hmrAccept(assetsToAccept[i][0], id);
+                        processedAssets[id] = true;
+                    }
                 }
             } else fullReload();
         }
@@ -505,30 +518,42 @@ function hmrAcceptCheckOne(bundle, id, depsByBundle) {
     if (checkedAssets[id]) return true;
     checkedAssets[id] = true;
     var cached = bundle.cache[id];
-    assetsToAccept.push([
+    assetsToDispose.push([
         bundle,
         id
     ]);
-    if (!cached || cached.hot && cached.hot._acceptCallbacks.length) return true;
+    if (!cached || cached.hot && cached.hot._acceptCallbacks.length) {
+        assetsToAccept.push([
+            bundle,
+            id
+        ]);
+        return true;
+    }
 }
-function hmrAcceptRun(bundle, id) {
+function hmrDispose(bundle, id) {
     var cached = bundle.cache[id];
-    bundle.hotData = {};
-    if (cached && cached.hot) cached.hot.data = bundle.hotData;
+    bundle.hotData[id] = {};
+    if (cached && cached.hot) cached.hot.data = bundle.hotData[id];
     if (cached && cached.hot && cached.hot._disposeCallbacks.length) cached.hot._disposeCallbacks.forEach(function(cb) {
-        cb(bundle.hotData);
+        cb(bundle.hotData[id]);
     });
     delete bundle.cache[id];
-    bundle(id);
-    cached = bundle.cache[id];
+}
+function hmrAccept(bundle, id) {
+    // Execute the module.
+    bundle(id); // Run the accept callbacks in the new version of the module.
+    var cached = bundle.cache[id];
     if (cached && cached.hot && cached.hot._acceptCallbacks.length) cached.hot._acceptCallbacks.forEach(function(cb) {
         var assetsToAlsoAccept = cb(function() {
             return getParents(module.bundle.root, id);
         });
-        if (assetsToAlsoAccept && assetsToAccept.length) // $FlowFixMe[method-unbinding]
-        assetsToAccept.push.apply(assetsToAccept, assetsToAlsoAccept);
+        if (assetsToAlsoAccept && assetsToAccept.length) {
+            assetsToAlsoAccept.forEach(function(a) {
+                hmrDispose(a[0], a[1]);
+            }); // $FlowFixMe[method-unbinding]
+            assetsToAccept.push.apply(assetsToAccept, assetsToAlsoAccept);
+        }
     });
-    acceptedAssets[id] = true;
 }
 
 },{}],"1SICI":[function(require,module,exports) {
@@ -536,7 +561,6 @@ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 var _swiper = require("swiper");
 var _swiperDefault = parcelHelpers.interopDefault(_swiper);
 var _swiperBundleMinCss = require("swiper/swiper-bundle.min.css");
-var _swiperMinCss = require("swiper/swiper.min.css");
 const swiper = new (0, _swiperDefault.default)(".swiper", {
     modules: [
         (0, _swiper.Navigation)
@@ -544,6 +568,12 @@ const swiper = new (0, _swiperDefault.default)(".swiper", {
     navigation: {
         nextEl: ".swiper-button-next",
         prevEl: ".swiper-button-prev"
+    },
+    breakpoints: {
+        // when window width is >= 320px
+        320: {
+            spaceBetween: 1020
+        }
     }
 });
 const modal_button = document.querySelector(".burger_button");
@@ -562,7 +592,7 @@ form.addEventListener("submit", (e)=>{
     e.preventDefault();
 });
 
-},{"swiper":"cCbRx","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","swiper/swiper-bundle.min.css":"girFM","swiper/swiper.min.css":"eFTGe"}],"cCbRx":[function(require,module,exports) {
+},{"swiper":"cCbRx","swiper/swiper-bundle.min.css":"girFM","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cCbRx":[function(require,module,exports) {
 /**
  * Swiper 8.4.5
  * Most modern mobile touch slider and framework with hardware accelerated transitions
@@ -926,21 +956,21 @@ class Swiper {
                 spv += 1;
                 if (slideSize > swiperSize) breakLoop = true;
             }
-            for(let i1 = activeIndex - 1; i1 >= 0; i1 -= 1)if (slides[i1] && !breakLoop) {
-                slideSize += slides[i1].swiperSlideSize;
+            for(let i = activeIndex - 1; i >= 0; i -= 1)if (slides[i] && !breakLoop) {
+                slideSize += slides[i].swiperSlideSize;
                 spv += 1;
                 if (slideSize > swiperSize) breakLoop = true;
             }
         } else {
             // eslint-disable-next-line
-            if (view === "current") for(let i2 = activeIndex + 1; i2 < slides.length; i2 += 1){
-                const slideInView = exact ? slidesGrid[i2] + slidesSizesGrid[i2] - slidesGrid[activeIndex] < swiperSize : slidesGrid[i2] - slidesGrid[activeIndex] < swiperSize;
+            if (view === "current") for(let i = activeIndex + 1; i < slides.length; i += 1){
+                const slideInView = exact ? slidesGrid[i] + slidesSizesGrid[i] - slidesGrid[activeIndex] < swiperSize : slidesGrid[i] - slidesGrid[activeIndex] < swiperSize;
                 if (slideInView) spv += 1;
             }
             else // previous
-            for(let i3 = activeIndex - 1; i3 >= 0; i3 -= 1){
-                const slideInView1 = slidesGrid[activeIndex] - slidesGrid[i3] < swiperSize;
-                if (slideInView1) spv += 1;
+            for(let i = activeIndex - 1; i >= 0; i -= 1){
+                const slideInView = slidesGrid[activeIndex] - slidesGrid[i] < swiperSize;
+                if (slideInView) spv += 1;
             }
         }
         return spv;
@@ -1655,10 +1685,10 @@ function val(value) {
         }
         return el.value;
     } // set value
-    for(let i1 = 0; i1 < this.length; i1 += 1){
-        const el1 = this[i1];
-        if (Array.isArray(value) && el1.multiple && el1.nodeName.toLowerCase() === "select") for(let j = 0; j < el1.options.length; j += 1)el1.options[j].selected = value.indexOf(el1.options[j].value) >= 0;
-        else el1.value = value;
+    for(let i = 0; i < this.length; i += 1){
+        const el = this[i];
+        if (Array.isArray(value) && el.multiple && el.nodeName.toLowerCase() === "select") for(let j = 0; j < el.options.length; j += 1)el.options[j].selected = value.indexOf(el.options[j].value) >= 0;
+        else el.value = value;
     }
     return this;
 }
@@ -1712,14 +1742,14 @@ function on(...args) {
         }
         else // Live events
         for(j = 0; j < events.length; j += 1){
-            const event1 = events[j];
+            const event = events[j];
             if (!el.dom7LiveListeners) el.dom7LiveListeners = {};
-            if (!el.dom7LiveListeners[event1]) el.dom7LiveListeners[event1] = [];
-            el.dom7LiveListeners[event1].push({
+            if (!el.dom7LiveListeners[event]) el.dom7LiveListeners[event] = [];
+            el.dom7LiveListeners[event].push({
                 listener,
                 proxyListener: handleLiveEvent
             });
-            el.addEventListener(event1, handleLiveEvent, capture);
+            el.addEventListener(event, handleLiveEvent, capture);
         }
     }
     return this;
@@ -2458,7 +2488,7 @@ function deleteProps(obj) {
         } catch (e) {}
         try {
             delete object[key];
-        } catch (e1) {}
+        } catch (e) {}
     });
 }
 function nextTick(callback, delay = 0) {
@@ -3098,10 +3128,10 @@ function updateSlides() {
      // Remove last grid elements depending on width
     if (!params.centeredSlides) {
         const newSlidesGrid = [];
-        for(let i1 = 0; i1 < snapGrid.length; i1 += 1){
-            let slidesGridItem = snapGrid[i1];
+        for(let i = 0; i < snapGrid.length; i += 1){
+            let slidesGridItem = snapGrid[i];
             if (params.roundLengths) slidesGridItem = Math.floor(slidesGridItem);
-            if (snapGrid[i1] <= swiper.virtualSize - swiperSize) newSlidesGrid.push(slidesGridItem);
+            if (snapGrid[i] <= swiper.virtualSize - swiperSize) newSlidesGrid.push(slidesGridItem);
         }
         snapGrid = newSlidesGrid;
         if (Math.floor(swiper.virtualSize - swiperSize) - Math.floor(snapGrid[snapGrid.length - 1]) > 1) snapGrid.push(swiper.virtualSize - swiperSize);
@@ -3133,13 +3163,13 @@ function updateSlides() {
         });
     }
     if (params.centerInsufficientSlides) {
-        let allSlidesSize1 = 0;
+        let allSlidesSize = 0;
         slidesSizesGrid.forEach((slideSizeValue)=>{
-            allSlidesSize1 += slideSizeValue + (params.spaceBetween ? params.spaceBetween : 0);
+            allSlidesSize += slideSizeValue + (params.spaceBetween ? params.spaceBetween : 0);
         });
-        allSlidesSize1 -= params.spaceBetween;
-        if (allSlidesSize1 < swiperSize) {
-            const allSlidesOffset = (swiperSize - allSlidesSize1) / 2;
+        allSlidesSize -= params.spaceBetween;
+        if (allSlidesSize < swiperSize) {
+            const allSlidesOffset = (swiperSize - allSlidesSize) / 2;
             snapGrid.forEach((snap, snapIndex)=>{
                 snapGrid[snapIndex] = snap - allSlidesOffset;
             });
@@ -3916,8 +3946,8 @@ function slideToClosest(speed = this.params.speed, runCallbacks = true, internal
         // The current translate is before the current snap index, so the choice
         // is between the current index and the one before it.
         const prevSnap = swiper.snapGrid[snapIndex - 1];
-        const currentSnap1 = swiper.snapGrid[snapIndex];
-        if (translate - prevSnap <= (currentSnap1 - prevSnap) * threshold) index -= swiper.params.slidesPerGroup;
+        const currentSnap = swiper.snapGrid[snapIndex];
+        if (translate - prevSnap <= (currentSnap - prevSnap) * threshold) index -= swiper.params.slidesPerGroup;
     }
     index = Math.max(index, 0);
     index = Math.min(index, swiper.slidesGrid.length - 1);
@@ -4007,13 +4037,13 @@ function loopCreate() {
         const slide = (0, _domJsDefault.default)(el);
         slide.attr("data-swiper-slide-index", index);
     });
-    for(let i1 = 0; i1 < swiper.loopedSlides; i1 += 1){
-        const index = i1 - Math.floor(i1 / slides.length) * slides.length;
+    for(let i = 0; i < swiper.loopedSlides; i += 1){
+        const index = i - Math.floor(i / slides.length) * slides.length;
         appendSlides.push(slides.eq(index)[0]);
         prependSlides.unshift(slides.eq(slides.length - index - 1)[0]);
     }
-    for(let i2 = 0; i2 < appendSlides.length; i2 += 1)$selector.append((0, _domJsDefault.default)(appendSlides[i2].cloneNode(true)).addClass(params.slideDuplicateClass));
-    for(let i3 = prependSlides.length - 1; i3 >= 0; i3 -= 1)$selector.prepend((0, _domJsDefault.default)(prependSlides[i3].cloneNode(true)).addClass(params.slideDuplicateClass));
+    for(let i = 0; i < appendSlides.length; i += 1)$selector.append((0, _domJsDefault.default)(appendSlides[i].cloneNode(true)).addClass(params.slideDuplicateClass));
+    for(let i = prependSlides.length - 1; i >= 0; i -= 1)$selector.prepend((0, _domJsDefault.default)(prependSlides[i].cloneNode(true)).addClass(params.slideDuplicateClass));
 }
 exports.default = loopCreate;
 
@@ -4038,8 +4068,8 @@ function loopFix() {
         // Fix For Positive Oversliding
         newIndex = -slides.length + activeIndex + loopedSlides;
         newIndex += loopedSlides;
-        const slideChanged1 = swiper.slideTo(newIndex, 0, false, true);
-        if (slideChanged1 && diff !== 0) swiper.setTranslate((rtl ? -swiper.translate : swiper.translate) - diff);
+        const slideChanged = swiper.slideTo(newIndex, 0, false, true);
+        if (slideChanged && diff !== 0) swiper.setTranslate((rtl ? -swiper.translate : swiper.translate) - diff);
     }
     swiper.allowSlidePrev = allowSlidePrev;
     swiper.allowSlideNext = allowSlideNext;
@@ -4469,7 +4499,7 @@ function onTouchEnd(event) {
         else if (swiper.isEnd) rewindFirstIndex = 0;
     } // Find current slide size
     const ratio = (currentPos - slidesGrid[stopIndex]) / groupSize;
-    const increment1 = stopIndex < params.slidesPerGroupSkip - 1 ? 1 : params.slidesPerGroup;
+    const increment = stopIndex < params.slidesPerGroupSkip - 1 ? 1 : params.slidesPerGroup;
     if (timeDiff > params.longSwipesMs) {
         // Long touches
         if (!params.longSwipes) {
@@ -4477,11 +4507,11 @@ function onTouchEnd(event) {
             return;
         }
         if (swiper.swipeDirection === "next") {
-            if (ratio >= params.longSwipesRatio) swiper.slideTo(params.rewind && swiper.isEnd ? rewindFirstIndex : stopIndex + increment1);
+            if (ratio >= params.longSwipesRatio) swiper.slideTo(params.rewind && swiper.isEnd ? rewindFirstIndex : stopIndex + increment);
             else swiper.slideTo(stopIndex);
         }
         if (swiper.swipeDirection === "prev") {
-            if (ratio > 1 - params.longSwipesRatio) swiper.slideTo(stopIndex + increment1);
+            if (ratio > 1 - params.longSwipesRatio) swiper.slideTo(stopIndex + increment);
             else if (rewindLastIndex !== null && ratio < 0 && Math.abs(ratio) > params.longSwipesRatio) swiper.slideTo(rewindLastIndex);
             else swiper.slideTo(stopIndex);
         }
@@ -4493,9 +4523,9 @@ function onTouchEnd(event) {
         }
         const isNavButtonTarget = swiper.navigation && (e.target === swiper.navigation.nextEl || e.target === swiper.navigation.prevEl);
         if (!isNavButtonTarget) {
-            if (swiper.swipeDirection === "next") swiper.slideTo(rewindFirstIndex !== null ? rewindFirstIndex : stopIndex + increment1);
+            if (swiper.swipeDirection === "next") swiper.slideTo(rewindFirstIndex !== null ? rewindFirstIndex : stopIndex + increment);
             if (swiper.swipeDirection === "prev") swiper.slideTo(rewindLastIndex !== null ? rewindLastIndex : stopIndex);
-        } else if (e.target === swiper.navigation.nextEl) swiper.slideTo(stopIndex + increment1);
+        } else if (e.target === swiper.navigation.nextEl) swiper.slideTo(stopIndex + increment);
         else swiper.slideTo(stopIndex);
     }
 }
@@ -5097,11 +5127,11 @@ function Virtual({ swiper , extendParams , on , emit  }) {
         else {
             for(let i = previousFrom; i <= previousTo; i += 1)if (i < from || i > to) swiper.$wrapperEl.find(`.${swiper.params.slideClass}[data-swiper-slide-index="${i}"]`).remove();
         }
-        for(let i1 = 0; i1 < slides.length; i1 += 1)if (i1 >= from && i1 <= to) {
-            if (typeof previousTo === "undefined" || force) appendIndexes.push(i1);
+        for(let i = 0; i < slides.length; i += 1)if (i >= from && i <= to) {
+            if (typeof previousTo === "undefined" || force) appendIndexes.push(i);
             else {
-                if (i1 > previousTo) appendIndexes.push(i1);
-                if (i1 < previousFrom) prependIndexes.push(i1);
+                if (i > previousTo) appendIndexes.push(i);
+                if (i < previousFrom) prependIndexes.push(i);
             }
         }
         appendIndexes.forEach((index)=>{
@@ -5499,12 +5529,12 @@ function Mousewheel({ swiper , extendParams , on , emit  }) {
             // to give time for the deceleration to finish. Stop ignoring after 500 msecs
             // or if it's a new scroll (larger delta or inverse sign as last event before
             // an end-of-momentum snap).
-            const newEvent1 = {
+            const newEvent = {
                 time: (0, _utilsJs.now)(),
                 delta: Math.abs(delta),
                 direction: Math.sign(delta)
             };
-            const ignoreWheelEvents = lastEventBeforeSnap && newEvent1.time < lastEventBeforeSnap.time + 500 && newEvent1.delta <= lastEventBeforeSnap.delta && newEvent1.direction === lastEventBeforeSnap.direction;
+            const ignoreWheelEvents = lastEventBeforeSnap && newEvent.time < lastEventBeforeSnap.time + 500 && newEvent.delta <= lastEventBeforeSnap.delta && newEvent.direction === lastEventBeforeSnap.direction;
             if (!ignoreWheelEvents) {
                 lastEventBeforeSnap = undefined;
                 if (swiper.params.loop) swiper.loopFix();
@@ -5534,12 +5564,12 @@ function Mousewheel({ swiper , extendParams , on , emit  }) {
                     clearTimeout(timeout);
                     timeout = undefined;
                     if (recentWheelEvents.length >= 15) recentWheelEvents.shift(); // only store the last N events
-                    const prevEvent1 = recentWheelEvents.length ? recentWheelEvents[recentWheelEvents.length - 1] : undefined;
+                    const prevEvent = recentWheelEvents.length ? recentWheelEvents[recentWheelEvents.length - 1] : undefined;
                     const firstEvent = recentWheelEvents[0];
-                    recentWheelEvents.push(newEvent1);
-                    if (prevEvent1 && (newEvent1.delta > prevEvent1.delta || newEvent1.direction !== prevEvent1.direction)) // Increasing or reverse-sign delta means the user started scrolling again. Clear the wheel event log.
+                    recentWheelEvents.push(newEvent);
+                    if (prevEvent && (newEvent.delta > prevEvent.delta || newEvent.direction !== prevEvent.direction)) // Increasing or reverse-sign delta means the user started scrolling again. Clear the wheel event log.
                     recentWheelEvents.splice(0);
-                    else if (recentWheelEvents.length >= 15 && newEvent1.time - firstEvent.time < 500 && firstEvent.delta - newEvent1.delta >= 1 && newEvent1.delta <= 6) {
+                    else if (recentWheelEvents.length >= 15 && newEvent.time - firstEvent.time < 500 && firstEvent.delta - newEvent.delta >= 1 && newEvent.delta <= 6) {
                         // We're at the end of the deceleration of a momentum scroll, so there's no need
                         // to wait for more events. Snap ASAP on the next tick.
                         // Also, because there's some remaining momentum we'll bias the snap in the
@@ -5547,7 +5577,7 @@ function Mousewheel({ swiper , extendParams , on , emit  }) {
                         // in the same direction as the scroll instead of reversing to snap.  Therefore,
                         // if it's already scrolled more than 20% in the current direction, keep going.
                         const snapToThreshold = delta > 0 ? 0.8 : 0.2;
-                        lastEventBeforeSnap = newEvent1;
+                        lastEventBeforeSnap = newEvent;
                         recentWheelEvents.splice(0);
                         timeout = (0, _utilsJs.nextTick)(()=>{
                             swiper.slideToClosest(swiper.params.speed, true, undefined, snapToThreshold);
@@ -5558,7 +5588,7 @@ function Mousewheel({ swiper , extendParams , on , emit  }) {
                     // for 500ms.
                     timeout = (0, _utilsJs.nextTick)(()=>{
                         const snapToThreshold = 0.5;
-                        lastEventBeforeSnap = newEvent1;
+                        lastEventBeforeSnap = newEvent;
                         recentWheelEvents.splice(0);
                         swiper.slideToClosest(swiper.params.speed, true, undefined, snapToThreshold);
                     }, 500);
@@ -5900,7 +5930,7 @@ function Pagination({ swiper , extendParams , on , emit  }) {
                     for(let i = firstIndex; i <= lastIndex; i += 1)bullets.eq(i).addClass(`${params.bulletActiveClass}-main`);
                     if (swiper.params.loop) {
                         if (bulletIndex >= bullets.length) {
-                            for(let i1 = params.dynamicMainBullets; i1 >= 0; i1 -= 1)bullets.eq(bullets.length - i1).addClass(`${params.bulletActiveClass}-main`);
+                            for(let i = params.dynamicMainBullets; i >= 0; i -= 1)bullets.eq(bullets.length - i).addClass(`${params.bulletActiveClass}-main`);
                             bullets.eq(bullets.length - params.dynamicMainBullets - 1).addClass(`${params.bulletActiveClass}-prev`);
                         } else {
                             setSideBullets($firstDisplayedBullet, "prev");
@@ -7019,9 +7049,9 @@ function Lazy({ swiper , extendParams , on , emit  }) {
                 const spv = Math.ceil(slidesPerView);
                 const maxIndex = Math.min(activeIndex + spv + Math.max(amount, spv), slides.length);
                 const minIndex = Math.max(activeIndex - Math.max(spv, amount), 0); // Next Slides
-                for(let i1 = activeIndex + spv; i1 < maxIndex; i1 += 1)if (slideExist(i1)) loadInSlide(i1);
+                for(let i = activeIndex + spv; i < maxIndex; i += 1)if (slideExist(i)) loadInSlide(i);
                  // Prev Slides
-                for(let i2 = minIndex; i2 < activeIndex; i2 += 1)if (slideExist(i2)) loadInSlide(i2);
+                for(let i = minIndex; i < activeIndex; i += 1)if (slideExist(i)) loadInSlide(i);
             } else {
                 const nextSlide = $wrapperEl.children(`.${swiperParams.slideNextClass}`);
                 if (nextSlide.length > 0) loadInSlide(slideIndex(nextSlide));
@@ -7947,7 +7977,7 @@ function Thumb({ swiper , extendParams , on  }) {
         thumbsToActivate = Math.floor(thumbsToActivate);
         thumbsSwiper.slides.removeClass(thumbActiveClass);
         if (thumbsSwiper.params.loop || thumbsSwiper.params.virtual && thumbsSwiper.params.virtual.enabled) for(let i = 0; i < thumbsToActivate; i += 1)thumbsSwiper.$wrapperEl.children(`[data-swiper-slide-index="${swiper.realIndex + i}"]`).addClass(thumbActiveClass);
-        else for(let i1 = 0; i1 < thumbsToActivate; i1 += 1)thumbsSwiper.slides.eq(swiper.realIndex + i1).addClass(thumbActiveClass);
+        else for(let i = 0; i < thumbsToActivate; i += 1)thumbsSwiper.slides.eq(swiper.realIndex + i).addClass(thumbActiveClass);
         const autoScrollOffset = swiper.params.thumbs.autoScrollOffset;
         const useOffset = autoScrollOffset && !thumbsSwiper.params.loop;
         if (swiper.realIndex !== thumbsSwiper.realIndex || useOffset) {
@@ -8354,10 +8384,10 @@ function addSlide(index, slides) {
         slidesBuffer.unshift(currentSlide);
     }
     if (typeof slides === "object" && "length" in slides) {
-        for(let i1 = 0; i1 < slides.length; i1 += 1)if (slides[i1]) $wrapperEl.append(slides[i1]);
+        for(let i = 0; i < slides.length; i += 1)if (slides[i]) $wrapperEl.append(slides[i]);
         newActiveIndex = activeIndexBuffer > index ? activeIndexBuffer + slides.length : activeIndexBuffer;
     } else $wrapperEl.append(slides);
-    for(let i2 = 0; i2 < slidesBuffer.length; i2 += 1)$wrapperEl.append(slidesBuffer[i2]);
+    for(let i = 0; i < slidesBuffer.length; i += 1)$wrapperEl.append(slidesBuffer[i]);
     if (params.loop) swiper.loopCreate();
     if (!params.observer) swiper.update();
     if (params.loop) swiper.slideTo(newActiveIndex + swiper.loopedSlides, 0, false);
@@ -9160,6 +9190,6 @@ function EffectCards({ swiper , extendParams , on  }) {
 }
 exports.default = EffectCards;
 
-},{"../../shared/create-shadow.js":"9JYAP","../../shared/effect-init.js":"5DnvG","../../shared/effect-target.js":"eKqS8","../../shared/effect-virtual-transition-end.js":"VhYFx","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"girFM":[function() {},{}],"eFTGe":[function() {},{}]},["jQVXF","1SICI"], "1SICI", "parcelRequire7680")
+},{"../../shared/create-shadow.js":"9JYAP","../../shared/effect-init.js":"5DnvG","../../shared/effect-target.js":"eKqS8","../../shared/effect-virtual-transition-end.js":"VhYFx","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"girFM":[function() {},{}]},["9tRox","1SICI"], "1SICI", "parcelRequire7680")
 
 //# sourceMappingURL=index.18dbc454.js.map
